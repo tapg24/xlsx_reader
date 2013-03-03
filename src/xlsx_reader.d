@@ -193,7 +193,8 @@ private {
 class Sheet {
 	uint m_id;
 	string m_name;
-	Variant[][] m_cells;
+	//Variant[][] m_cells;
+	Cell[][] m_cells;
 	string[] m_sharedStrings;
 	class Merged { uint rlo, rhi, clo, chi; }
 	Merged[] m_mergedCells;
@@ -213,9 +214,11 @@ class Sheet {
 				auto cellEnd = cellByName(range[1]);
 				uint rows = cellEnd.row - cellBegin.row + 1;
 				uint cols = cellEnd.col - cellBegin.col + 1;
-				m_cells = new Variant[][](rows, cols);
+				//m_cells = new Variant[][](rows, cols);
+				m_cells = new Cell[][](rows, cols);
 			}
 		};
+		// values
 		xmlSheet.onStartTag["row"] = (ElementParser xmlRow) {
 			xmlRow.onStartTag["c"] = (ElementParser xmlCol) {
 				auto cellname = xmlCol.tag.attr["r"];
@@ -225,20 +228,22 @@ class Sheet {
 				xmlCol.onEndTag["v"] = (in Element e) {
 					if ( celltype !is null && *celltype == "s" ) { // shared string
 						uint idx = to!uint(e.text());
-						m_cells[pos.row][pos.col] = to!string(m_sharedStrings[idx]);
+						//m_cells[pos.row][pos.col] = to!string(m_sharedStrings[idx]);
+						string value = to!string(m_sharedStrings[idx]);
+						m_cells[pos.row][pos.col] = new Cell(value);
 					}
 					else if ( cellstyle !is null && *cellstyle == "1" ) { // currency
 						double value = to!double(e.text());
-						m_cells[pos.row][pos.col] = value;
+						m_cells[pos.row][pos.col] = new Cell(value);
 					}
 					else if ( cellstyle !is null && *cellstyle == "2" ) { // datetime
 						auto oledatetime = to!double(e.text());
 						auto value = OleTimeToDateTime(oledatetime);
-						m_cells[pos.row][pos.col] = value;
+						m_cells[pos.row][pos.col] = new Cell(value);
 					}
 					else if ( celltype is null && cellstyle is null ) { // double
 						auto value = to!double(e.text());
-						m_cells[pos.row][pos.col] = value;
+						m_cells[pos.row][pos.col] = new Cell(value);
 					}
 					else {
 						auto value = e.text();
@@ -249,6 +254,26 @@ class Sheet {
 				xmlCol.parse();
 			};
 			xmlRow.parse();
+		};
+		// merged cells
+		xmlSheet.onStartTag["mergeCells"] = (ElementParser xmlMergedCells) {
+			auto count = to!uint(xmlMergedCells.tag.attr["count"]);
+			xmlMergedCells.onEndTag["mergeCell"] = (in Element mergedCell) {
+				auto merged = mergedCell.tag.attr["ref"];
+				auto range = merged.split(":");
+				auto lo = cellByName(range[0]);
+				auto hi = cellByName(range[1]);
+				auto mergedInfo = new Merged;
+				with(mergedInfo) {
+					rlo = lo.row;
+					clo = lo.col;
+					rhi = hi.row;
+					chi = hi.col;
+				}
+				m_mergedCells ~= mergedInfo;
+			};
+			xmlMergedCells.parse();
+			writeln(m_mergedCells);
 		};
 		xmlSheet.parse();
 		//printThis();
@@ -272,12 +297,12 @@ class Sheet {
 		return m_cells[0].length;
 	}
 	
-	Variant[] rowValues(uint idxRow)
+	Cell[] row(uint idxRow)
 	{
 		return m_cells[idxRow];
 	}
 
-	Variant cellValue(string cellname) {
+	Cell cell(string cellname) {
 		auto pos = cellByName(cellname);
 		return m_cells[pos.row][pos.col];
 	}
@@ -460,13 +485,13 @@ unittest {
 	mixin( unit!"xlsx_reader" );
 	Workbook workbook = new Workbook("../../resource/excel_workbook.xlsx");
 	Sheet sheet1 = workbook.sheetByName("Лист1");
-	auto row0 = sheet1.rowValues(0);
-	assert( row0[0] == "Cell-A1" );
-	assert( sheet1.cellValue("A1") == "Cell-A1" );
-	assert( row0[1] == "Cell-B1" );
-	assert( row0[2] == "Cell-C1" );
-	assert( sheet1.cellValue("A4") == 1 );
-	assert( sheet1.cellValue("A5") == 50.3 );
+	auto row0 = sheet1.row(0);
+	assert( row0[0].value == "Cell-A1" );
+	assert( sheet1.cell("A1").value == "Cell-A1" );
+	assert( row0[1].value == "Cell-B1" );
+	assert( row0[2].value == "Cell-C1" );
+	assert( sheet1.cell("A4").value == 1 );
+	assert( sheet1.cell("A5").value == 50.3 );
 }
 
 int main(string[] argv) {
