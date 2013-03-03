@@ -195,7 +195,9 @@ class Sheet {
 	string m_name;
 	Variant[][] m_cells;
 	string[] m_sharedStrings;
-	
+	class Merged { uint rlo, rhi, clo, chi; }
+	Merged[] m_mergedCells;
+
 	this(uint id, string name, string rawXmlSheet, ref string[] sharedStrings) {
 		m_id = id;
 		m_name = name;
@@ -465,10 +467,6 @@ unittest {
 	assert( row0[2] == "Cell-C1" );
 	assert( sheet1.cellValue("A4") == 1 );
 	assert( sheet1.cellValue("A5") == 50.3 );
-	//auto row = sheet1.rowValues(0);
-	//string valueA1 = "Cell-A1";
-	//assert( row[0].type is typeid(valueA1) );
-	//assert( row[0] == valueA1 );
 }
 
 int main(string[] argv) {
