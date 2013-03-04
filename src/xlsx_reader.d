@@ -29,7 +29,7 @@ DateTime OleTimeToDateTime(double vtime) {
 	return DateTime(1899, 12, 30) + seconds(cast(long)(vtime * 86400));
 }
 
-class XlsxHandler {
+class ArchiveHandler {
 	BufferedFile m_zip;
 	string[string] m_xmlFiles;
 	
@@ -43,7 +43,7 @@ class XlsxHandler {
 		}
 	}
 	
-	string[] getXmlFileNames() {
+	string[] getFileNames() {
 		string[] xmlFileNames;
 		foreach(name, data; m_xmlFiles) {
 			xmlFileNames ~= name;
@@ -51,14 +51,14 @@ class XlsxHandler {
 		return xmlFileNames;
 	}
 	
-	string getXmlFile(string name) {
+	string getFile(string name) {
 		return m_xmlFiles[name];
 	}
 	
 	unittest {
 		mixin( unit!("xlsx_reader.XlsxHandler") );
-		XlsxHandler handler = new XlsxHandler("../../resource/excel_workbook.xlsx");
-		string[] xmlFileNames = handler.getXmlFileNames();
+		ArchiveHandler handler = new ArchiveHandler("../../resource/excel_workbook.xlsx");
+		string[] xmlFileNames = handler.getFileNames();
 		assert( xmlFileNames.length != 0 );
 	}
 }
@@ -68,18 +68,18 @@ class Workbook {
 	public {
 		
 		this(string filename) {
-			m_xlsxHandler = new XlsxHandler(filename);
+			m_archiveHandler = new ArchiveHandler(filename);
 			
 			// read shared string
-			string sharedStringsXml = m_xlsxHandler.getXmlFile("xl/sharedStrings.xml");
+			string sharedStringsXml = m_archiveHandler.getFile("xl/sharedStrings.xml");
 			m_sharedStrings = readSharedString(sharedStringsXml);
 			
 			// read sheets
-			string rawXmlWorkbook = m_xlsxHandler.getXmlFile("xl/workbook.xml");
+			string rawXmlWorkbook = m_archiveHandler.getFile("xl/workbook.xml");
 			auto xmlWorkbook = new DocumentParser(rawXmlWorkbook);
 			xmlWorkbook.onStartTag["sheet"] = (ElementParser xml) {
 				uint sheetId = to!uint(xml.tag.attr["sheetId"]);
-				string rawXmlSheet = m_xlsxHandler.getXmlFile("xl/worksheets/sheet" ~ to!string(sheetId) ~ ".xml");
+				string rawXmlSheet = m_archiveHandler.getFile("xl/worksheets/sheet" ~ to!string(sheetId) ~ ".xml");
 				string sheetName = xml.tag.attr["name"];
 				Sheet sheet = new Sheet(sheetId, sheetName, rawXmlSheet, m_sharedStrings);
 				m_sheets ~= sheet;
@@ -126,7 +126,7 @@ class Workbook {
 	
 	private {
 		
-		XlsxHandler m_xlsxHandler;
+		ArchiveHandler m_archiveHandler;
 		Sheet[] m_sheets;
 		string[] m_sharedStrings;
 		
