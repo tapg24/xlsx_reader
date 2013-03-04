@@ -193,7 +193,6 @@ private {
 class Sheet {
 	uint m_id;
 	string m_name;
-	//Variant[][] m_cells;
 	Cell[][] m_cells;
 	string[] m_sharedStrings;
 	class Merged { uint rlo, rhi, clo, chi; }
@@ -214,10 +213,30 @@ class Sheet {
 				auto cellEnd = cellByName(range[1]);
 				uint rows = cellEnd.row - cellBegin.row + 1;
 				uint cols = cellEnd.col - cellBegin.col + 1;
-				//m_cells = new Variant[][](rows, cols);
 				m_cells = new Cell[][](rows, cols);
 			}
 		};
+
+		// merged cells
+		xmlSheet.onStartTag["mergeCells"] = (ElementParser xmlMergedCells) {
+			auto count = to!uint(xmlMergedCells.tag.attr["count"]);
+			xmlMergedCells.onEndTag["mergeCell"] = (in Element mergedCell) {
+				auto merged = mergedCell.tag.attr["ref"];
+				auto range = merged.split(":");
+				auto lo = cellByName(range[0]);
+				auto hi = cellByName(range[1]);
+				auto mergedInfo = new Merged;
+				with(mergedInfo) {
+					rlo = lo.row;
+					clo = lo.col;
+					rhi = hi.row;
+					chi = hi.col;
+				}
+				m_mergedCells ~= mergedInfo;
+			};
+			xmlMergedCells.parse();
+		};
+
 		// values
 		xmlSheet.onStartTag["row"] = (ElementParser xmlRow) {
 			xmlRow.onStartTag["c"] = (ElementParser xmlCol) {
@@ -228,7 +247,6 @@ class Sheet {
 				xmlCol.onEndTag["v"] = (in Element e) {
 					if ( celltype !is null && *celltype == "s" ) { // shared string
 						uint idx = to!uint(e.text());
-						//m_cells[pos.row][pos.col] = to!string(m_sharedStrings[idx]);
 						string value = to!string(m_sharedStrings[idx]);
 						m_cells[pos.row][pos.col] = new Cell(value);
 					}
@@ -255,28 +273,7 @@ class Sheet {
 			};
 			xmlRow.parse();
 		};
-		// merged cells
-		xmlSheet.onStartTag["mergeCells"] = (ElementParser xmlMergedCells) {
-			auto count = to!uint(xmlMergedCells.tag.attr["count"]);
-			xmlMergedCells.onEndTag["mergeCell"] = (in Element mergedCell) {
-				auto merged = mergedCell.tag.attr["ref"];
-				auto range = merged.split(":");
-				auto lo = cellByName(range[0]);
-				auto hi = cellByName(range[1]);
-				auto mergedInfo = new Merged;
-				with(mergedInfo) {
-					rlo = lo.row;
-					clo = lo.col;
-					rhi = hi.row;
-					chi = hi.col;
-				}
-				m_mergedCells ~= mergedInfo;
-			};
-			xmlMergedCells.parse();
-			writeln(m_mergedCells);
-		};
 		xmlSheet.parse();
-		//printThis();
 	}
 	
 	@property ulong id() {
@@ -307,15 +304,30 @@ class Sheet {
 		return m_cells[pos.row][pos.col];
 	}
 	
-	private void printThis()
-	{
-		writeln("length: ", m_cells.sizeof);
-		foreach(idxr, ro; m_cells) {
-			foreach(idxc, co; ro) {
-				writef(" %5s ", co.type);
+	private {
+		void printThis() {
+			writeln("length: ", m_cells.sizeof);
+			foreach(idxr, ro; m_cells) {
+				foreach(idxc, co; ro) {
+					writef(" %5s ", co.type);
+				}
+				write("\n");
+			}		
+		}
+
+		bool isMerged(uint row, uint col) {
+			foreach(range; m_mergedCells) {
+				if(range.rlo <= row && range.rhi >= row && range.clo <= col && range.chi >= col) return true;
 			}
-			write("\n");
-		}		
+			return false;
+		}
+
+		Cell mergedRef(uint row, uint col) {
+			foreach(range; m_mergedCells) {
+				if(range.rlo <= row && range.rhi >= row && range.clo <= col && range.chi >= col) return m_cells[range.rlo][range.clo];
+			}
+			return null;
+		}
 	}
 	
 	unittest {
@@ -456,9 +468,17 @@ public:
 
 class Cell {
 	Variant m_value;
+	bool m_merged;
+	Cell m_refToValue;
 	
 	this(T)(T value) {
 		m_value = value;
+	}
+
+	this(T)(T value, ref Cell refToValue) {
+		this(value);
+		m_refToValue = refToValue;
+		m_merged = true;
 	}
 	
 	this(T : Variant)(T value) {
@@ -468,7 +488,12 @@ class Cell {
 	@property Variant value() {
 		return m_value;
 	}
-	
+
+	@property Variant mergedValue() {
+		if( m_merged ) return m_refToValue.value;
+		else return m_value;
+	}
+
 	@property TypeInfo type() {
 		return m_value.type;
 	}
@@ -478,6 +503,8 @@ class Cell {
 		Cell cell = new Cell(value);
 		assert( cell.type is typeid(value) );
 		assert( cell.value == value );
+		Cell anotherCell = new Cell(11, cell);
+		assert( anotherCell.mergedValue == value );
 	}
 }
 
@@ -492,6 +519,7 @@ unittest {
 	assert( row0[2].value == "Cell-C1" );
 	assert( sheet1.cell("A4").value == 1 );
 	assert( sheet1.cell("A5").value == 50.3 );
+	writeln( sheet1.cell("A8").value );
 }
 
 int main(string[] argv) {

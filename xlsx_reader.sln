@@ -1,0 +1,23 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 11.00
+# Visual Studio 2010
+Project("{3947E667-4C90-4C3A-BEB9-7148D6FE0D7C}") = "xlsx_reader", "xlsx_reader.dproj", "{8BE8EB36-DDB8-4081-B5C1-46AA3982B7AD}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+		Unittest|Any CPU = Unittest|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{8BE8EB36-DDB8-4081-B5C1-46AA3982B7AD}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{8BE8EB36-DDB8-4081-B5C1-46AA3982B7AD}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{8BE8EB36-DDB8-4081-B5C1-46AA3982B7AD}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{8BE8EB36-DDB8-4081-B5C1-46AA3982B7AD}.Release|Any CPU.Build.0 = Release|Any CPU
+		{8BE8EB36-DDB8-4081-B5C1-46AA3982B7AD}.Unittest|Any CPU.ActiveCfg = Unittest|Any CPU
+		{8BE8EB36-DDB8-4081-B5C1-46AA3982B7AD}.Unittest|Any CPU.Build.0 = Unittest|Any CPU
+	EndGlobalSection
+	GlobalSection(MonoDevelopProperties) = preSolution
+		StartupItem = xlsx_reader.dproj
+	EndGlobalSection
+EndGlobal
