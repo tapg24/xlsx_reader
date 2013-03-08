@@ -197,6 +197,7 @@ class Sheet {
 	string[] m_sharedStrings;
 	class Merged { uint rlo, rhi, clo, chi; }
 	Merged[] m_mergedCells;
+	bool[][] m_mer;
 
 	this(uint id, string name, string rawXmlSheet, ref string[] sharedStrings) {
 		m_id = id;
